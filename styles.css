@@ -1,0 +1,78 @@
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.activity-card.selected {
+  border: 2px solid #0d6efd;
+  box-shadow: 0 0 0 2px #0d6efd33;
+  background: #e7f1ff;
+}
+
+.card {
+  margin-bottom: 24px;
+}
+
+@media (max-width: 1200px) {
+  #spotifyPanel {
+    display: none !important;
+  }
+}
+
+@media (max-width: 768px) {
+  body .d-flex {
+    flex-direction: column !important;
+  }
+  
+  .card {
+    width: 100% !important;
+    max-width: 400px;
+  }
+  
+  #chatPanel {
+    display: none !important;
+  }
+  
+  #spotifyPanel {
+    display: none !important;
+  }
+  
+  #toggleChatBtn, #toggleSpotifyMainBtn {
+    display: block !important;
+  }
+}
+
+@media (min-width: 769px) {
+  #toggleChatBtn, #toggleSpotifyMainBtn {
+    display: inline-block;
+  }
+}
+
+#chatMessages::-webkit-scrollbar {
+  width: 4px;
+}
+
+#chatMessages::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+#chatMessages::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 2px;
+}
+
+#activeUsers::-webkit-scrollbar {
+  width: 3px;
+}
+
+#activeUsers::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+#activeUsers::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 2px;
+}
+
+#activeUsers .badge {
+  cursor: default;
+}
