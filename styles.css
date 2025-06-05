@@ -28,23 +28,36 @@ body {
     max-width: 400px;
   }
   
-  #chatPanel {
+  #chatPanel, #spotifyPanel {
     display: none !important;
   }
   
-  #spotifyPanel {
-    display: none !important;
-  }
-  
-  #toggleChatBtn, #toggleSpotifyMainBtn {
-    display: block !important;
+  #toggleChatBtn, #toggleMusicBtn {
+    display: inline-block !important;
   }
 }
 
 @media (min-width: 769px) {
-  #toggleChatBtn, #toggleSpotifyMainBtn {
+  #toggleChatBtn, #toggleMusicBtn {
     display: inline-block;
   }
+  
+  #chatOverlay, #musicOverlay {
+    display: none !important;
+  }
+}
+
+/* Mobile overlay styles */
+#chatOverlay .card-body, #musicOverlay .card-body {
+  padding: 1rem;
+}
+
+#musicOverlay .card-body {
+  padding: 0 !important;
+}
+
+#chatOverlay iframe, #musicOverlay iframe {
+  border-radius: 8px;
 }
 
 #chatMessages::-webkit-scrollbar {

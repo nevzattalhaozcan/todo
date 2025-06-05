@@ -87,99 +87,148 @@ document.addEventListener('DOMContentLoaded', () => {
   // Spotify elements
   const spotifyPanel = document.getElementById('spotifyPanel');
   const toggleSpotifyBtn = document.getElementById('toggleSpotifyBtn');
+  const toggleMusicBtn = document.getElementById('toggleMusicBtn');
 
-  // Active users management
-  let activeUsersList = new Set();
-  let currentUserNickname = '';
-
-  function updateActiveUsers() {
-    activeUsers.innerHTML = '';
-    
-    if (activeUsersList.size === 0) {
-      activeUsers.innerHTML = '<div class="text-muted text-center small">No users yet...</div>';
-      userCount.textContent = '0';
-      return;
-    }
-
-    activeUsersList.forEach(nickname => {
-      const userSpan = document.createElement('span');
-      userSpan.className = 'badge bg-light text-dark me-1 mb-1';
-      userSpan.style.fontSize = '0.75em';
-      userSpan.textContent = nickname === currentUserNickname ? `${nickname} (you)` : nickname;
-      activeUsers.appendChild(userSpan);
-    });
-    
-    userCount.textContent = activeUsersList.size.toString();
-  }
-
-  function addActiveUser(nickname) {
-    activeUsersList.add(nickname);
-    updateActiveUsers();
-  }
-
-  function removeActiveUser(nickname) {
-    activeUsersList.delete(nickname);
-    updateActiveUsers();
-  }
-
-  // Chat functionality
-  function addChatMessage(message, isOwn = false, nickname = null) {
-    const messageDiv = document.createElement('div');
-    messageDiv.className = `mb-2 ${isOwn ? 'text-end' : ''}`;
-    
-    const time = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-    const displayName = nickname ? `${nickname}: ` : '';
-    messageDiv.innerHTML = `
-      <div class="small ${isOwn ? 'bg-primary text-white' : 'bg-white'} rounded px-2 py-1 d-inline-block" style="max-width: 80%;">
-        ${nickname && !isOwn ? `<strong>${nickname}:</strong> ` : ''}${message}
-        <div class="small ${isOwn ? 'text-white-50' : 'text-muted'}" style="font-size: 0.7em;">${time}</div>
+  // Create mobile overlay containers
+  function createMobileOverlays() {
+    // Create chat overlay
+    const chatOverlay = document.createElement('div');
+    chatOverlay.id = 'chatOverlay';
+    chatOverlay.className = 'position-fixed top-0 start-0 w-100 h-100 d-none';
+    chatOverlay.style.cssText = 'background: rgba(0,0,0,0.5); z-index: 1050;';
+    chatOverlay.innerHTML = `
+      <div class="d-flex justify-content-center align-items-center h-100 p-3">
+        <div class="card shadow-lg" style="width: 100%; max-width: 400px; height: 80vh; display: flex; flex-direction: column;">
+          <div class="card-header d-flex justify-content-between align-items-center">
+            <h6 class="mb-0">Room Chat</h6>
+            <button class="btn btn-sm btn-outline-secondary" id="closeChatOverlay">✕</button>
+          </div>
+          <div class="card-body" id="chatOverlayContent" style="flex: 1; overflow: hidden;">
+            <!-- Chat content will be moved here -->
+          </div>
+        </div>
       </div>
     `;
     
-    chatMessages.appendChild(messageDiv);
-    chatMessages.scrollTop = chatMessages.scrollHeight;
+    // Create music overlay
+    const musicOverlay = document.createElement('div');
+    musicOverlay.id = 'musicOverlay';
+    musicOverlay.className = 'position-fixed top-0 start-0 w-100 h-100 d-none';
+    musicOverlay.style.cssText = 'background: rgba(0,0,0,0.5); z-index: 1050;';
+    musicOverlay.innerHTML = `
+      <div class="d-flex justify-content-center align-items-center h-100 p-3">
+        <div class="card shadow-lg" style="width: 100%; max-width: 400px; height: 80vh; display: flex; flex-direction: column;">
+          <div class="card-header d-flex justify-content-between align-items-center">
+            <h6 class="mb-0">Focus Music</h6>
+            <button class="btn btn-sm btn-outline-secondary" id="closeMusicOverlay">✕</button>
+          </div>
+          <div class="card-body p-0" id="musicOverlayContent" style="flex: 1;">
+            <!-- Music content will be moved here -->
+          </div>
+        </div>
+      </div>
+    `;
     
-    // Remove placeholder text
-    const placeholder = chatMessages.querySelector('.text-muted.text-center');
-    if (placeholder) {
-      placeholder.remove();
-    }
+    document.body.appendChild(chatOverlay);
+    document.body.appendChild(musicOverlay);
   }
 
-  function sendChatMessage() {
-    const message = chatInput.value.trim();
-    const nickname = currentUserNickname || 'Anonymous';
-    if (message) {
-      addChatMessage(message, true);
-      
-      // Broadcast to peers
-      pomodoroSync.broadcast({
-        type: 'chat_message',
-        message: message,
-        nickname: nickname,
-        timestamp: Date.now()
-      });
-      
-      chatInput.value = '';
-    }
+  // Initialize mobile overlays
+  createMobileOverlays();
+
+  const chatOverlay = document.getElementById('chatOverlay');
+  const musicOverlay = document.getElementById('musicOverlay');
+  const closeChatOverlay = document.getElementById('closeChatOverlay');
+  const closeMusicOverlay = document.getElementById('closeMusicOverlay');
+  const chatOverlayContent = document.getElementById('chatOverlayContent');
+  const musicOverlayContent = document.getElementById('musicOverlayContent');
+
+  // Check if mobile
+  function isMobile() {
+    return window.innerWidth <= 768;
   }
 
   // Chat toggle functionality
   let isChatVisible = true;
   toggleChatBtn.addEventListener('click', () => {
-    isChatVisible = !isChatVisible;
-    if (isChatVisible) {
-      chatPanel.style.display = 'flex';
-      toggleChatBtn.textContent = '💬 Chat';
-      toggleChatBtn.classList.remove('btn-outline-primary');
-      toggleChatBtn.classList.add('btn-outline-secondary');
+    if (isMobile()) {
+      // Move chat content to overlay
+      const chatContent = chatPanel.innerHTML;
+      chatOverlayContent.innerHTML = chatContent;
+      chatOverlay.classList.remove('d-none');
+      
+      // Re-bind events in overlay
+      rebindChatEvents();
     } else {
-      chatPanel.style.display = 'none';
-      toggleChatBtn.textContent = '💬 Show';
-      toggleChatBtn.classList.remove('btn-outline-secondary');
-      toggleChatBtn.classList.add('btn-outline-primary');
+      // Desktop behavior
+      isChatVisible = !isChatVisible;
+      if (isChatVisible) {
+        chatPanel.style.display = 'flex';
+        toggleChatBtn.textContent = '💬 Chat';
+      } else {
+        chatPanel.style.display = 'none';
+        toggleChatBtn.textContent = '💬 Show';
+      }
     }
   });
+
+  // Music toggle functionality
+  toggleMusicBtn.addEventListener('click', () => {
+    if (isMobile()) {
+      // Move music content to overlay
+      const musicContent = spotifyPanel.innerHTML;
+      musicOverlayContent.innerHTML = musicContent;
+      musicOverlay.classList.remove('d-none');
+    } else {
+      // Desktop behavior - toggle spotify panel
+      toggleSpotifyBtn.click();
+    }
+  });
+
+  // Close overlay handlers
+  closeChatOverlay.addEventListener('click', () => {
+    // Move content back to original panel
+    const overlayContent = chatOverlayContent.innerHTML;
+    chatPanel.innerHTML = overlayContent;
+    chatOverlay.classList.add('d-none');
+    
+    // Re-bind events in original panel
+    rebindChatEvents();
+  });
+
+  closeMusicOverlay.addEventListener('click', () => {
+    // Move content back to original panel
+    const overlayContent = musicOverlayContent.innerHTML;
+    spotifyPanel.innerHTML = overlayContent;
+    musicOverlay.classList.add('d-none');
+  });
+
+  // Function to re-bind chat events after moving DOM elements
+  function rebindChatEvents() {
+    const newChatInput = document.querySelector('#chatOverlayContent #chatInput') || document.querySelector('#chatInput');
+    const newSendBtn = document.querySelector('#chatOverlayContent #sendChatBtn') || document.querySelector('#sendChatBtn');
+    
+    if (newChatInput && newSendBtn) {
+      // Remove old event listeners and add new ones
+      newSendBtn.addEventListener('click', sendChatMessage);
+      newChatInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+          sendChatMessage();
+        }
+      });
+    }
+  }
+
+  // Update chat input and send button references when switching views
+  function updateChatReferences() {
+    if (isMobile() && !chatOverlay.classList.contains('d-none')) {
+      chatInput = document.querySelector('#chatOverlayContent #chatInput');
+      sendChatBtn = document.querySelector('#chatOverlayContent #sendChatBtn');
+    } else {
+      chatInput = document.getElementById('chatInput');
+      sendChatBtn = document.getElementById('sendChatBtn');
+    }
+  }
 
   // Spotify toggle functionality
   let isSpotifyVisible = true;
@@ -191,6 +240,19 @@ document.addEventListener('DOMContentLoaded', () => {
     } else {
       spotifyPanel.style.display = 'none';
       toggleSpotifyBtn.textContent = '🎵 Show';
+    }
+  });
+
+  // Close overlays when clicking outside
+  chatOverlay.addEventListener('click', (e) => {
+    if (e.target === chatOverlay) {
+      closeChatOverlay.click();
+    }
+  });
+
+  musicOverlay.addEventListener('click', (e) => {
+    if (e.target === musicOverlay) {
+      closeMusicOverlay.click();
     }
   });
 
